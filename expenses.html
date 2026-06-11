@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Έξοδα Σπιτιού</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #F7F5F2; --surface: #FFFFFF; --border: #E8E4DF;
+    --text: #1A1714; --muted: #8A847D; --accent: #4A7C59;
+    --accent-light: #EBF2ED; --me-color: #4A7C59; --me-bg: #EBF2ED;
+    --spouse-color: #7C5C4A; --spouse-bg: #F2EDEB;
+    --danger: #C0392B; --warn: #E67E22; --shadow: 0 2px 12px rgba(0,0,0,0.07);
+  }
+  body { font-family:'Inter',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; padding-bottom:40px; }
+  header { background:var(--surface); border-bottom:1px solid var(--border); padding:16px 20px; position:sticky; top:0; z-index:100; box-shadow:var(--shadow); }
+  header h1 { font-size:17px; font-weight:600; letter-spacing:-0.3px; }
+  header p { font-size:12px; color:var(--muted); margin-top:2px; }
+  .tabs { display:flex; background:var(--surface); border-bottom:1px solid var(--border); overflow-x:auto; }
+  .tabs::-webkit-scrollbar { display:none; }
+  .tab { flex:1; min-width:60px; padding:12px 6px; font-size:12px; font-weight:500; color:var(--muted); border:none; background:none; cursor:pointer; border-bottom:2px solid transparent; transition:all 0.2s; white-space:nowrap; }
+  .tab.active { color:var(--accent); border-bottom-color:var(--accent); }
+  .section { display:none; padding:20px; }
+  .section.active { display:block; }
+
+  /* PERSON */
+  .person-toggle { display:flex; gap:10px; margin-bottom:16px; }
+  .person-btn { flex:1; padding:12px; border-radius:12px; border:2px solid var(--border); background:var(--surface); font-size:14px; font-weight:500; cursor:pointer; transition:all 0.2s; }
+  .person-btn.me.active { background:var(--me-bg); border-color:var(--me-color); color:var(--me-color); }
+  .person-btn.spouse.active { background:var(--spouse-bg); border-color:var(--spouse-color); color:var(--spouse-color); }
+
+  /* SOURCE */
+  .source-row { display:flex; gap:8px; margin-bottom:16px; overflow-x:auto; padding-bottom:4px; }
+  .source-row::-webkit-scrollbar { display:none; }
+  .source-chip { padding:8px 14px; border-radius:20px; border:1.5px solid var(--border); background:var(--surface); font-size:13px; font-weight:500; cursor:pointer; white-space:nowrap; transition:all 0.15s; }
+  .source-chip.active { background:var(--text); border-color:var(--text); color:white; }
+
+  /* CATEGORIES */
+  .categories-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:8px; margin-bottom:16px; }
+  .cat-btn { padding:10px 12px; border-radius:10px; border:1.5px solid var(--border); background:var(--surface); font-size:13px; cursor:pointer; text-align:left; transition:all 0.15s; display:flex; align-items:center; gap:8px; }
+  .cat-btn.active { border-color:var(--accent); background:var(--accent-light); color:var(--accent); font-weight:500; }
+  .add-cat-btn { padding:10px 12px; border-radius:10px; border:1.5px dashed var(--border); background:transparent; font-size:13px; cursor:pointer; text-align:left; display:flex; align-items:center; gap:8px; color:var(--muted); transition:all 0.15s; }
+  .add-cat-btn:active { background:var(--bg); }
+
+  .date-input { width:100%; padding:12px 14px; border-radius:10px; border:1.5px solid var(--border); background:var(--surface); font-size:15px; color:var(--text); outline:none; margin-bottom:16px; font-family:'Inter',sans-serif; appearance:none; }
+  .date-input:focus { border-color:var(--accent); }
+  .voice-input-wrap { display:flex; gap:8px; margin-bottom:8px; }
+  .voice-text-input { flex:1; padding:13px 16px; border-radius:12px; border:1.5px solid var(--accent); background:var(--accent-light); font-size:15px; color:var(--text); outline:none; font-family:'Inter',sans-serif; }
+  .voice-text-input::placeholder { color:var(--muted); }
+  .voice-go-btn { width:50px; height:50px; min-width:50px; border-radius:12px; border:none; background:var(--accent); color:white; font-size:20px; cursor:pointer; flex-shrink:0; }
+  /* AMOUNT */
+  .amount-row { display:flex; gap:10px; margin-bottom:8px; align-items:center; overflow:visible; }
+  .amount-input { flex:1; min-width:0; padding:14px 16px; border-radius:12px; border:1.5px solid var(--border); background:var(--surface); font-size:22px; font-weight:600; color:var(--text); outline:none; transition:border 0.2s; }
+  .amount-input:focus { border-color:var(--accent); }
+  .amount-input::placeholder { color:var(--border); }
+  .voice-btn { width:56px; height:56px; min-width:56px; border-radius:50%; border:none; background:var(--accent); color:white; font-size:22px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.2s; flex-shrink:0; }
+  .voice-btn:active { transform:scale(0.93); }
+  .voice-btn.listening { background:var(--danger); animation:pulse 1s infinite; }
+  @keyframes pulse { 0%,100%{box-shadow:0 0 0 0 rgba(192,57,43,0.4)} 50%{box-shadow:0 0 0 10px rgba(192,57,43,0)} }
+  .voice-hint { font-size:12px; color:var(--muted); text-align:center; margin-bottom:12px; min-height:18px; }
+  .note-input { width:100%; padding:12px 14px; border-radius:10px; border:1.5px solid var(--border); background:var(--surface); font-size:14px; color:var(--text); outline:none; margin-bottom:16px; font-family:'Inter',sans-serif; }
+  .note-input:focus { border-color:var(--accent); }
+  .save-btn { width:100%; padding:15px; border-radius:12px; border:none; background:var(--accent); color:white; font-size:16px; font-weight:600; cursor:pointer; transition:opacity 0.2s; }
+  .save-btn:active { opacity:0.85; }
+
+  /* SOURCES WALLET */
+  .wallet-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-bottom:20px; }
+  .wallet-card { background:var(--surface); border-radius:14px; padding:14px; border:1px solid var(--border); position:relative; }
+  .wallet-card .w-name { font-size:12px; color:var(--muted); font-weight:500; margin-bottom:6px; display:flex; align-items:center; gap:6px; }
+  .wallet-card .w-balance { font-size:22px; font-weight:700; letter-spacing:-0.5px; }
+  .wallet-card .w-spent { font-size:11px; color:var(--muted); margin-top:3px; }
+  .wallet-card .w-edit { position:absolute; top:10px; right:10px; background:none; border:none; color:var(--border); font-size:14px; cursor:pointer; padding:2px; }
+  .wallet-card .w-edit:active { color:var(--accent); }
+  .wallet-card.low .w-balance { color:var(--warn); }
+  .wallet-card.empty .w-balance { color:var(--danger); }
+  .section-title { font-size:13px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:12px; }
+
+  /* BUDGET */
+  .budget-list { display:flex; flex-direction:column; gap:10px; margin-bottom:20px; }
+  .budget-row { background:var(--surface); border-radius:12px; padding:14px; border:1px solid var(--border); }
+  .budget-top { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+  .budget-cat { display:flex; align-items:center; gap:8px; font-size:14px; font-weight:500; }
+  .budget-amounts { font-size:13px; color:var(--muted); }
+  .budget-amounts span { font-weight:600; color:var(--text); }
+  .progress-bar { height:6px; background:var(--bg); border-radius:3px; overflow:hidden; }
+  .progress-fill { height:100%; border-radius:3px; background:var(--accent); transition:width 0.4s; }
+  .progress-fill.warn { background:var(--warn); }
+  .progress-fill.over { background:var(--danger); }
+  .budget-edit-btn { background:none; border:none; color:var(--muted); font-size:12px; cursor:pointer; text-decoration:underline; margin-top:6px; padding:0; }
+
+  /* HISTORY */
+  .filter-row { display:flex; gap:8px; margin-bottom:16px; overflow-x:auto; padding-bottom:4px; }
+  .filter-row::-webkit-scrollbar { display:none; }
+  .filter-chip { padding:7px 14px; border-radius:20px; border:1.5px solid var(--border); background:var(--surface); font-size:12px; font-weight:500; cursor:pointer; white-space:nowrap; transition:all 0.15s; }
+  .filter-chip.active { background:var(--accent); border-color:var(--accent); color:white; }
+  .expense-item { background:var(--surface); border-radius:12px; padding:14px 16px; margin-bottom:10px; border:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; gap:12px; }
+  .expense-left { display:flex; align-items:center; gap:12px; flex:1; min-width:0; }
+  .cat-icon { width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0; background:var(--bg); }
+  .expense-info { flex:1; min-width:0; }
+  .expense-cat { font-size:14px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .expense-meta { font-size:11px; color:var(--muted); margin-top:2px; display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+  .person-tag { padding:2px 8px; border-radius:10px; font-size:11px; font-weight:500; }
+  .person-tag.me { background:var(--me-bg); color:var(--me-color); }
+  .person-tag.spouse { background:var(--spouse-bg); color:var(--spouse-color); }
+  .source-tag { padding:2px 8px; border-radius:10px; font-size:11px; font-weight:500; background:#F0F0F0; color:#555; }
+  .expense-right { display:flex; align-items:center; gap:10px; }
+  .expense-amount { font-size:16px; font-weight:700; white-space:nowrap; }
+  .delete-btn { background:none; border:none; color:#CCC; font-size:16px; cursor:pointer; padding:4px; }
+  .delete-btn:active { color:var(--danger); }
+  .empty-state { text-align:center; padding:60px 20px; color:var(--muted); }
+  .empty-state .icon { font-size:40px; margin-bottom:12px; }
+
+  /* SUMMARY */
+  .summary-card { background:var(--surface); border-radius:14px; padding:18px; margin-bottom:14px; border:1px solid var(--border); }
+  .summary-card h3 { font-size:13px; font-weight:500; color:var(--muted); margin-bottom:14px; text-transform:uppercase; letter-spacing:0.5px; }
+  .total-big { font-size:36px; font-weight:700; letter-spacing:-1px; margin-bottom:16px; }
+  .split-row { display:flex; gap:12px; }
+  .split-card { flex:1; padding:12px; border-radius:10px; text-align:center; }
+  .split-card.me { background:var(--me-bg); }
+  .split-card.spouse { background:var(--spouse-bg); }
+  .split-card .name { font-size:12px; font-weight:500; margin-bottom:4px; }
+  .split-card.me .name { color:var(--me-color); }
+  .split-card.spouse .name { color:var(--spouse-color); }
+  .split-card .amount { font-size:20px; font-weight:700; }
+  .split-card.me .amount { color:var(--me-color); }
+  .split-card.spouse .amount { color:var(--spouse-color); }
+  .cat-summary-row { display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid var(--border); }
+  .cat-summary-row:last-child { border-bottom:none; }
+  .cat-summary-left { display:flex; align-items:center; gap:10px; }
+  .cat-summary-label { font-size:14px; font-weight:500; }
+  .cat-summary-sub { font-size:11px; color:var(--muted); margin-top:1px; }
+  .cat-summary-amount { font-size:15px; font-weight:700; }
+  .month-select { width:100%; padding:10px 14px; border-radius:10px; border:1.5px solid var(--border); background:var(--surface); font-size:14px; color:var(--text); outline:none; margin-bottom:16px; font-family:'Inter',sans-serif; appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%238A847D' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 14px center; }
+
+  /* MODAL */
+  .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:200; display:flex; align-items:flex-end; justify-content:center; opacity:0; pointer-events:none; transition:opacity 0.2s; }
+  .modal-overlay.open { opacity:1; pointer-events:all; }
+  .modal { background:var(--surface); border-radius:20px 20px 0 0; padding:24px 20px 40px; width:100%; max-width:480px; transform:translateY(100%); transition:transform 0.3s; }
+  .modal-overlay.open .modal { transform:translateY(0); }
+  .modal h3 { font-size:16px; font-weight:600; margin-bottom:16px; }
+  .modal input { width:100%; padding:12px 14px; border-radius:10px; border:1.5px solid var(--border); background:var(--bg); font-size:15px; color:var(--text); outline:none; margin-bottom:12px; font-family:'Inter',sans-serif; }
+  .modal input:focus { border-color:var(--accent); }
+  .modal-btn { width:100%; padding:14px; border-radius:12px; border:none; background:var(--accent); color:white; font-size:15px; font-weight:600; cursor:pointer; margin-bottom:10px; }
+  .modal-cancel { width:100%; padding:12px; border-radius:12px; border:1.5px solid var(--border); background:none; color:var(--muted); font-size:15px; cursor:pointer; }
+
+  .toast { position:fixed; bottom:30px; left:50%; transform:translateX(-50%) translateY(80px); background:var(--text); color:white; padding:12px 22px; border-radius:30px; font-size:14px; font-weight:500; z-index:999; transition:transform 0.3s; white-space:nowrap; }
+  .toast.show { transform:translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🏠 Έξοδα Σπιτιού</h1>
+  <p id="today-date"></p>
+</header>
+
+<div class="tabs">
+  <button class="tab active" onclick="showTab('add')">➕ Έξοδο</button>
+  <button class="tab" onclick="showTab('wallet')">💳 Πηγές</button>
+  <button class="tab" onclick="showTab('budget')">🎯 Budget</button>
+  <button class="tab" onclick="showTab('history')">📋 Ιστορικό</button>
+  <button class="tab" onclick="showTab('summary')">📊 Σύνολα</button>
+</div>
+
+<!-- ADD -->
+<div class="section active" id="tab-add">
+  <div class="person-toggle">
+    <button class="person-btn me active" id="btn-me" onclick="selectPerson('me')">👩 Εγώ</button>
+    <button class="person-btn spouse" id="btn-spouse" onclick="selectPerson('spouse')">👨 Σωτήρης</button>
+  </div>
+
+  <p class="section-title" style="margin-bottom:8px;">Πηγή πληρωμής</p>
+  <div class="source-row" id="source-row"></div>
+
+  <p class="section-title" style="margin-bottom:8px;">Κατηγορία</p>
+  <div class="categories-grid" id="cat-grid"></div>
+
+  <p class="section-title" style="margin-bottom:8px;">Ημερομηνία</p>
+  <input type="date" class="date-input" id="date-input">
+
+  <div class="voice-input-wrap">
+    <input class="voice-text-input" id="voice-text-input"
+      placeholder="🎤 Πες το εδώ… π.χ. «σούπερ μάρκετ 45»"
+      inputmode="text"
+      onkeyup="if(event.key==='Enter'){parseVoiceText(this.value);this.blur();}">
+    <button class="voice-go-btn" onclick="parseVoiceText(document.getElementById('voice-text-input').value)">✓</button>
+  </div>
+  <div class="voice-hint" id="voice-hint">Γράψε ή υπαγόρευσε με το 🎤 του πληκτρολογίου, μετά πάτα ✓</div>
+  <div class="amount-row">
+    <input class="amount-input" type="number" inputmode="decimal" id="amount-input" placeholder="Ποσό €">
+  </div>
+  <input class="note-input" id="note-input" placeholder="Σημείωση (προαιρετικό)…">
+  <button class="save-btn" onclick="saveExpense()">Αποθήκευση</button>
+</div>
+
+<!-- WALLET -->
+<div class="section" id="tab-wallet">
+  <p class="section-title">Υπόλοιπο ανά πηγή</p>
+  <div class="wallet-grid" id="wallet-grid"></div>
+  <button class="save-btn" style="background:var(--text);" onclick="openSetBalances()">✏️ Ενημέρωση υπολοίπων</button>
+</div>
+
+<!-- BUDGET -->
+<div class="section" id="tab-budget">
+  <p class="section-title">Μηνιαίος προϋπολογισμός</p>
+  <div class="budget-list" id="budget-list"></div>
+  <button class="save-btn" style="background:var(--text);" onclick="openSetBudget()">✏️ Ορισμός budget</button>
+</div>
+
+<!-- HISTORY -->
+<div class="section" id="tab-history">
+  <div class="filter-row" id="filter-row">
+    <button class="filter-chip active" onclick="setFilter('all',this)">Όλα</button>
+    <button class="filter-chip" onclick="setFilter('me',this)">Εγώ</button>
+    <button class="filter-chip" onclick="setFilter('spouse',this)">Σωτήρης</button>
+  </div>
+  <select class="month-select" id="history-month-select" onchange="renderHistory()">
+    <option value="all">Όλοι οι μήνες</option>
+  </select>
+  <button class="save-btn" style="background:var(--text);margin-bottom:14px;" onclick="loadFromSheet()">🔄 Συγχρονισμός με Sheets</button>
+  <div id="history-list"></div>
+</div>
+
+<!-- SUMMARY -->
+<div class="section" id="tab-summary">
+  <select class="month-select" id="month-select" onchange="renderSummary()"></select>
+  <div id="summary-content"></div>
+</div>
+
+<!-- MODAL: Set Balances -->
+<div class="modal-overlay" id="modal-balances">
+  <div class="modal">
+    <h3>💳 Τρέχοντα υπόλοιπα</h3>
+    <div id="balance-inputs"></div>
+    <button class="modal-btn" onclick="saveBalances()">Αποθήκευση</button>
+    <button class="modal-cancel" onclick="closeModal('modal-balances')">Άκυρο</button>
+  </div>
+</div>
+
+<!-- MODAL: Set Budget -->
+<div class="modal-overlay" id="modal-budget">
+  <div class="modal">
+    <h3>🎯 Μηνιαίο budget ανά κατηγορία</h3>
+    <div id="budget-inputs"></div>
+    <button class="modal-btn" onclick="saveBudgets()">Αποθήκευση</button>
+    <button class="modal-cancel" onclick="closeModal('modal-budget')">Άκυρο</button>
+  </div>
+</div>
+
+<!-- MODAL: Add Category -->
+<div class="modal-overlay" id="modal-addcat">
+  <div class="modal">
+    <h3>➕ Νέα κατηγορία</h3>
+    <input id="newcat-emoji" placeholder="Emoji (π.χ. 🏋️)" maxlength="4">
+    <input id="newcat-name" placeholder="Όνομα κατηγορίας">
+    <button class="modal-btn" onclick="saveNewCat()">Προσθήκη</button>
+    <button class="modal-cancel" onclick="closeModal('modal-addcat')">Άκυρο</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const DEFAULT_CATEGORIES = [
+  { id:'supermarket', label:'Σούπερ μάρκετ', icon:'🛒' },
+  { id:'health', label:'Υγεία', icon:'🏥' },
+  { id:'beauty', label:'Ομορφιά', icon:'💅' },
+  { id:'bills', label:'Πάγια', icon:'📄' },
+  { id:'family', label:'Family time', icon:'👨‍👩‍👧' },
+  { id:'gifts', label:'Επισκέψεις / Δώρα', icon:'🎁' },
+  { id:'transport', label:'Μετακινήσεις', icon:'🚗' },
+  { id:'ntina', label:'Ντίνα', icon:'👧' },
+  { id:'sotiris-personal', label:'Προσωπικά Σωτήρη', icon:'👨' },
+  { id:'clothing', label:'Ένδυση', icon:'👕' },
+  { id:'other', label:'Άλλο', icon:'📦' },
+];
+
+const SOURCES = [
+  { id:'cash', label:'Μετρητά', icon:'💵' },
+  { id:'me-eurobank', label:'Εγώ Eurobank', icon:'💳' },
+  { id:'skrill', label:'Skrill', icon:'🟣' },
+  { id:'wise', label:'Wise', icon:'🟢' },
+  { id:'ethniki', label:'Εθνική', icon:'🏛️' },
+  { id:'sotíris', label:'Σωτήρης', icon:'👨' },
+];
+
+let selectedPerson = 'me';
+let selectedCat = null;
+let selectedSource = null;
+let currentFilter = 'all';
+let recognition = null;
+let listening = false;
+
+const SHEET_URL = 'https://script.google.com/macros/s/AKfycbwB939j8KtLpN8ZMgfmoMQ6RDAF8t7WL95UKFctbK9L7trYWZ5SwCzvIjkAVpOx1nV0/exec';
+
+async function syncToSheet(action, data) {
+  try {
+    await fetch(SHEET_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action, ...data })
+    });
+  } catch(e) { console.log('Sync error:', e); }
+}
+
+async function loadFromSheet() {
+  try {
+    showToast('🔄 Συγχρονισμός…');
+    const res = await fetch(SHEET_URL + '?t=' + Date.now());
+    const data = await res.json();
+    if (data.expenses && data.expenses.length > 0) {
+      const sheetExpenses = data.expenses.map(e => ({
+        id: Number(e.id),
+        date: e.date,
+        person: e.person,
+        cat: e.cat,
+        source: e.source,
+        amount: parseFloat(e.amount),
+        note: e.note || ''
+      }));
+      // Merge: keep local + add any from sheet not already local
+      const local = getExpenses();
+      const localIds = new Set(local.map(e => Number(e.id)));
+      const newFromSheet = sheetExpenses.filter(e => !localIds.has(e.id));
+      const merged = [...local, ...newFromSheet];
+      saveExpenses(merged);
+      showToast('✅ Συγχρονίστηκε!');
+    } else {
+      showToast('✅ Δεν υπάρχουν νέα δεδομένα');
+    }
+    renderHistory();
+  } catch(e) {
+    showToast('⚠️ Σφάλμα σύνδεσης');
+  }
+}
+
+function getCategories() {
+  try {
+    const custom = JSON.parse(localStorage.getItem('custom_cats') || '[]');
+    return [...DEFAULT_CATEGORIES, ...custom];
+  } catch { return DEFAULT_CATEGORIES; }
+}
+function getExpenses() { try { return JSON.parse(localStorage.getItem('expenses') || '[]'); } catch { return []; } }
+function saveExpenses(arr) { localStorage.setItem('expenses', JSON.stringify(arr)); }
+function getBalances() { try { return JSON.parse(localStorage.getItem('balances') || '{}'); } catch { return {}; } }
+function saveBalancesData(obj) { localStorage.setItem('balances', JSON.stringify(obj)); }
+function getBudgets() { try { return JSON.parse(localStorage.getItem('budgets') || '{}'); } catch { return {}; } }
+function saveBudgetsData(obj) { localStorage.setItem('budgets', JSON.stringify(obj)); }
+
+// Init date display and date input
+const todayStr = new Date().toLocaleDateString('el-GR', {weekday:'long',day:'numeric',month:'long',year:'numeric'});
+document.getElementById('today-date').textContent = todayStr;
+const todayISO = new Date().toISOString().slice(0,10);
+document.getElementById('date-input').value = todayISO;
+
+// WISE INTEREST AUTO-CREDIT
+// Runs on every app load; credits 0.8% on day 5 or 6 of each month, once per month
+(function checkWiseInterest() {
+  const now = new Date();
+  const day = now.getDate();
+  if (day !== 5 && day !== 6) return;
+  const monthKey = now.toISOString().slice(0, 7); // e.g. "2026-06"
+  const lastCredited = localStorage.getItem('wise_interest_month');
+  if (lastCredited === monthKey) return; // already credited this month
+  const bal = getBalances();
+  if (!bal['wise'] || bal['wise'] <= 0) return;
+  const interest = Math.round(bal['wise'] * 0.008 * 100) / 100;
+  bal['wise'] = Math.round((bal['wise'] + interest) * 100) / 100;
+  saveBalancesData(bal);
+  localStorage.setItem('wise_interest_month', monthKey);
+  // Log as income entry in expenses (negative = income marker)
+  const expenses = getExpenses();
+  expenses.push({
+    id: Date.now(),
+    person: 'me',
+    cat: 'other',
+    source: 'wise',
+    amount: -interest,
+    note: '🟢 Τόκος Wise +' + interest.toFixed(2) + '€ (0.8%)',
+    date: now.toISOString(),
+    isInterest: true
+  });
+  saveExpenses(expenses);
+  setTimeout(() => showToast('🟢 Τόκος Wise +' + interest.toFixed(2) + '€ πιστώθηκε!'), 800);
+})();
+
+// Build source chips
+function buildSourceChips() {
+  const row = document.getElementById('source-row');
+  row.innerHTML = SOURCES.map(s => `
+    <button class="source-chip" id="src-${s.id}" onclick="selectSource('${s.id}')">${s.icon} ${s.label}</button>
+  `).join('');
+}
+buildSourceChips();
+
+// Build category grid
+function buildCatGrid() {
+  const grid = document.getElementById('cat-grid');
+  const cats = getCategories();
+  grid.innerHTML = cats.map(c => `
+    <button class="cat-btn" id="cat-${c.id}" onclick="selectCat('${c.id}')">
+      <span>${c.icon}</span><span>${c.label}</span>
+    </button>
+  `).join('') + `
+    <button class="add-cat-btn" onclick="openModal('modal-addcat')">
+      <span>➕</span><span>Νέα κατηγορία</span>
+    </button>`;
+}
+buildCatGrid();
+
+function selectPerson(p) {
+  selectedPerson = p;
+  document.getElementById('btn-me').classList.toggle('active', p==='me');
+  document.getElementById('btn-spouse').classList.toggle('active', p==='spouse');
+}
+
+function selectSource(id) {
+  selectedSource = id;
+  document.querySelectorAll('.source-chip').forEach(b => b.classList.remove('active'));
+  const el = document.getElementById('src-'+id);
+  if (el) el.classList.add('active');
+}
+
+function selectCat(id) {
+  selectedCat = id;
+  document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+  const el = document.getElementById('cat-'+id);
+  if (el) el.classList.add('active');
+}
+
+function showTab(t) {
+  const tabs = ['add','wallet','budget','history','summary'];
+  document.querySelectorAll('.tab').forEach((b,i) => b.classList.toggle('active', tabs[i]===t));
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.getElementById('tab-'+t).classList.add('active');
+  if (t==='wallet') renderWallet();
+  if (t==='budget') renderBudget();
+  if (t==='history') renderHistory();
+  if (t==='summary') { populateMonthSelect(); renderSummary(); }
+}
+
+function saveExpense() {
+  const amt = parseFloat(document.getElementById('amount-input').value);
+  if (!amt || amt<=0) { showToast('Βάλε ποσό 💶'); return; }
+  if (!selectedCat) { showToast('Επίλεξε κατηγορία'); return; }
+  if (!selectedSource) { showToast('Επίλεξε πηγή πληρωμής'); return; }
+  const note = document.getElementById('note-input').value.trim();
+  const selectedDate = document.getElementById('date-input').value || new Date().toISOString().slice(0,10);
+  const dateISO = new Date(selectedDate + 'T12:00:00').toISOString();
+  const expenses = getExpenses();
+  const newExpense = { id:Date.now(), person:selectedPerson, cat:selectedCat, source:selectedSource, amount:amt, note, date:dateISO };
+  expenses.push(newExpense);
+  saveExpenses(expenses);
+  syncToSheet('add', newExpense);
+
+  // Deduct from balance
+  const bal = getBalances();
+  if (bal[selectedSource] !== undefined) {
+    bal[selectedSource] = Math.max(0, (bal[selectedSource] || 0) - amt);
+    saveBalancesData(bal);
+  }
+
+  showToast('Αποθηκεύτηκε ✓');
+  document.getElementById('amount-input').value = '';
+  document.getElementById('note-input').value = '';
+  selectedCat = null; selectedSource = null;
+  document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.source-chip').forEach(b => b.classList.remove('active'));
+}
+
+function parseVoiceText(text) {
+  if (!text || !text.trim()) return;
+  text = text.toLowerCase().trim();
+  document.getElementById('voice-hint').textContent = '✅ «' + text + '»';
+
+  if (text.includes('σωτήρης')||text.includes('σωτηρης')) selectPerson('spouse');
+  else if (text.includes('εγώ')||text.includes('εγω')) selectPerson('me');
+
+  const numMatch = text.match(/(\d+([.,]\d+)?)/);
+  if (numMatch) document.getElementById('amount-input').value = numMatch[1].replace(',','.');
+
+  const catMap = {
+    supermarket:['σούπερ','σουπερ','μάρκετ','μαρκετ','αγορές','αγορες','ψώνια','ψωνια'],
+    health:['υγεία','υγεια','γιατρό','γιατρο','φαρμακείο','φαρμακειο','φάρμακα','φαρμακα'],
+    beauty:['ομορφιά','ομορφια','κομμωτήριο','κομμωτηριο','αισθητική','αισθητικη','νύχια','νυχια'],
+    bills:['πάγια','παγια','ρεύμα','ρευμα','νερό','νερο','λογαριασμό','λογαριασμο'],
+    family:['family','οικογένεια','οικογενεια','διασκέδαση','διασκεδαση','βόλτα','βολτα','καφέ','καφε','εστιατόριο','εστιατοριο'],
+    gifts:['δώρο','δωρο','επίσκεψη','επισκεψη','δώρα','δωρα'],
+    transport:['βενζίνη','βενζινη','πάρκινγκ','παρκινγκ','διόδια','διοδια','μετακίνηση','μετακινηση','ταξί','ταξι'],
+  };
+  const srcMap = {
+    cash:['μετρητά','μετρητα','μετρητό','μετρητο'],
+    'me-eurobank':['eurobank','ευρωμπάνκ'],
+    skrill:['skrill','σκριλ'],
+    wise:['wise','ουάιζ'],
+    ethniki:['εθνική','εθνικη'],
+    'sotíris':['σωτήρης κάρτα','σωτηρης καρτα'],
+  };
+  for (const [catId,kws] of Object.entries(catMap)) { if(kws.some(k=>text.includes(k))){ selectCat(catId); break; } }
+  for (const [srcId,kws] of Object.entries(srcMap)) { if(kws.some(k=>text.includes(k))){ selectSource(srcId); break; } }
+
+  document.getElementById('voice-text-input').value = '';
+}
+
+// WALLET
+function renderWallet() {
+  const bal = getBalances();
+  const expenses = getExpenses();
+  const thisMonth = new Date().toISOString().slice(0,7);
+  const grid = document.getElementById('wallet-grid');
+  grid.innerHTML = SOURCES.map(s => {
+    const balance = bal[s.id] !== undefined ? bal[s.id] : null;
+    const spent = expenses.filter(e => e.source===s.id && e.date.startsWith(thisMonth)).reduce((sum,e)=>sum+e.amount,0);
+    const balanceClass = balance !== null ? (balance < 50 ? 'empty' : balance < 200 ? 'low' : '') : '';
+    const balanceStr = balance !== null ? balance.toFixed(2)+'€' : '—';
+    return `
+      <div class="wallet-card ${balanceClass}">
+        <div class="w-name">${s.icon} ${s.label}</div>
+        <div class="w-balance">${balanceStr}</div>
+        <div class="w-spent">Ξοδεύτηκαν: ${spent.toFixed(2)}€</div>
+      </div>`;
+  }).join('');
+}
+
+function openSetBalances() {
+  const bal = getBalances();
+  document.getElementById('balance-inputs').innerHTML = SOURCES.map(s => `
+    <label style="font-size:13px;color:var(--muted);display:block;margin-bottom:2px;">${s.icon} ${s.label}</label>
+    <input id="bal-${s.id}" type="number" inputmode="decimal" placeholder="0" value="${bal[s.id]||''}">
+  `).join('');
+  openModal('modal-balances');
+}
+
+function saveBalances() {
+  const bal = {};
+  SOURCES.forEach(s => {
+    const v = parseFloat(document.getElementById('bal-'+s.id).value);
+    if (!isNaN(v)) bal[s.id] = v;
+  });
+  saveBalancesData(bal);
+  closeModal('modal-balances');
+  renderWallet();
+  showToast('Υπόλοιπα αποθηκεύτηκαν ✓');
+}
+
+// BUDGET
+function renderBudget() {
+  const budgets = getBudgets();
+  const expenses = getExpenses();
+  const thisMonth = new Date().toISOString().slice(0,7);
+  const cats = getCategories();
+  const list = document.getElementById('budget-list');
+  const rows = cats.filter(c => budgets[c.id] > 0).map(c => {
+    const budget = budgets[c.id] || 0;
+    const spent = expenses.filter(e => e.cat===c.id && e.date.startsWith(thisMonth)).reduce((sum,e)=>sum+e.amount,0);
+    const pct = Math.min(100, (spent/budget)*100);
+    const fillClass = pct>=100 ? 'over' : pct>=80 ? 'warn' : '';
+    const remaining = budget - spent;
+    return `
+      <div class="budget-row">
+        <div class="budget-top">
+          <div class="budget-cat"><span>${c.icon}</span><span>${c.label}</span></div>
+          <div class="budget-amounts">
+            <span>${spent.toFixed(0)}€</span> / ${budget.toFixed(0)}€
+          </div>
+        </div>
+        <div class="progress-bar"><div class="progress-fill ${fillClass}" style="width:${pct}%"></div></div>
+        <div style="font-size:11px;color:${remaining<0?'var(--danger)':remaining<budget*0.2?'var(--warn)':'var(--muted)'};margin-top:5px;">
+          ${remaining>=0 ? 'Απομένουν '+remaining.toFixed(2)+'€' : 'Υπέρβαση '+(Math.abs(remaining)).toFixed(2)+'€ ⚠️'}
+        </div>
+      </div>`;
+  }).join('');
+  list.innerHTML = rows || `<div class="empty-state"><div class="icon">🎯</div><p>Δεν έχεις ορίσει budget ακόμα</p></div>`;
+}
+
+function openSetBudget() {
+  const budgets = getBudgets();
+  const cats = getCategories();
+  document.getElementById('budget-inputs').innerHTML = cats.map(c => `
+    <label style="font-size:13px;color:var(--muted);display:block;margin-bottom:2px;">${c.icon} ${c.label}</label>
+    <input id="bud-${c.id}" type="number" inputmode="decimal" placeholder="0 = χωρίς όριο" value="${budgets[c.id]||''}">
+  `).join('');
+  openModal('modal-budget');
+}
+
+function saveBudgets() {
+  const budgets = {};
+  getCategories().forEach(c => {
+    const v = parseFloat(document.getElementById('bud-'+c.id).value);
+    if (!isNaN(v) && v>0) budgets[c.id] = v;
+  });
+  saveBudgetsData(budgets);
+  closeModal('modal-budget');
+  renderBudget();
+  showToast('Budget αποθηκεύτηκε ✓');
+}
+
+// CUSTOM CATEGORIES
+function saveNewCat() {
+  const emoji = document.getElementById('newcat-emoji').value.trim() || '📌';
+  const name = document.getElementById('newcat-name').value.trim();
+  if (!name) { showToast('Βάλε όνομα'); return; }
+  const custom = JSON.parse(localStorage.getItem('custom_cats') || '[]');
+  const id = 'custom_' + Date.now();
+  custom.push({ id, label:name, icon:emoji });
+  localStorage.setItem('custom_cats', JSON.stringify(custom));
+  closeModal('modal-addcat');
+  buildCatGrid();
+  showToast('Κατηγορία προστέθηκε ✓');
+  document.getElementById('newcat-emoji').value = '';
+  document.getElementById('newcat-name').value = '';
+}
+
+// HISTORY
+function setFilter(f, el) {
+  currentFilter = f;
+  document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  renderHistory();
+}
+
+function populateHistoryMonths() {
+  const sel = document.getElementById('history-month-select');
+  if (!sel) return;
+  const expenses = getExpenses();
+  const months = [...new Set(expenses.map(e => e.date.slice(0,7)))].sort().reverse();
+  const current = sel.value;
+  sel.innerHTML = '<option value="all">Όλοι οι μήνες</option>' + months.map(m => {
+    const [y,mo] = m.split('-');
+    const label = new Date(y,mo-1).toLocaleDateString('el-GR',{month:'long',year:'numeric'});
+    return `<option value="${m}">${label}</option>`;
+  }).join('');
+  if (current) sel.value = current;
+}
+
+function renderHistory() {
+  populateHistoryMonths();
+  const list = document.getElementById('history-list');
+  const cats = getCategories();
+  const selectedMonth = document.getElementById('history-month-select')?.value || 'all';
+  let expenses = getExpenses();
+  if (currentFilter !== 'all') expenses = expenses.filter(e => e.person === currentFilter);
+  if (selectedMonth !== 'all') expenses = expenses.filter(e => e.date.startsWith(selectedMonth));
+  expenses = expenses.slice().reverse();
+  if (!expenses.length) { list.innerHTML=`<div class="empty-state"><div class="icon">📭</div><p>Δεν υπάρχουν έξοδα</p></div>`; return; }
+  list.innerHTML = expenses.map(e => {
+    const cat = cats.find(c=>c.id===e.cat) || {label:e.cat, icon:'📦'};
+    const src = SOURCES.find(s=>s.id===e.source);
+    const d = new Date(e.date);
+    const dateStr = d.toLocaleDateString('el-GR',{day:'numeric',month:'short'});
+    const personName = e.person==='me' ? 'Εγώ' : 'Σωτήρης';
+    return `
+      <div class="expense-item">
+        <div class="expense-left">
+          <div class="cat-icon">${cat.icon}</div>
+          <div class="expense-info">
+            <div class="expense-cat">${cat.label}${e.note?' · '+e.note:''}</div>
+            <div class="expense-meta">
+              <span class="person-tag ${e.person}">${personName}</span>
+              ${src?`<span class="source-tag">${src.icon} ${src.label}</span>`:''}
+              ${dateStr}
+            </div>
+          </div>
+        </div>
+        <div class="expense-right">
+          <div class="expense-amount">${e.amount.toFixed(2)}€</div>
+          <button class="delete-btn" onclick="deleteExpense(${e.id})">✕</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function deleteExpense(id) {
+  let expenses = getExpenses().filter(e=>e.id!==id);
+  saveExpenses(expenses);
+  renderHistory();
+  showToast('Διαγράφηκε');
+}
+
+// SUMMARY
+function getMonths() {
+  const expenses = getExpenses();
+  const months = [...new Set(expenses.map(e=>e.date.slice(0,7)))].sort().reverse();
+  return months;
+}
+
+function populateMonthSelect() {
+  const sel = document.getElementById('month-select');
+  const months = getMonths();
+  const current = new Date().toISOString().slice(0,7);
+  const allMonths = months.includes(current) ? months : [current,...months];
+  sel.innerHTML = allMonths.map(m => {
+    const [y,mo] = m.split('-');
+    const label = new Date(y,mo-1).toLocaleDateString('el-GR',{month:'long',year:'numeric'});
+    return `<option value="${m}">${label}</option>`;
+  }).join('');
+}
+
+function renderSummary() {
+  const month = document.getElementById('month-select').value;
+  const expenses = getExpenses().filter(e=>e.date.startsWith(month));
+  const cats = getCategories();
+  const content = document.getElementById('summary-content');
+  if (!expenses.length) { content.innerHTML=`<div class="empty-state"><div class="icon">📊</div><p>Δεν υπάρχουν έξοδα αυτό τον μήνα</p></div>`; return; }
+  const total = expenses.reduce((s,e)=>s+e.amount,0);
+  const meTotal = expenses.filter(e=>e.person==='me').reduce((s,e)=>s+e.amount,0);
+  const spouseTotal = expenses.filter(e=>e.person==='spouse').reduce((s,e)=>s+e.amount,0);
+  const byCat = {};
+  expenses.forEach(e => { if(!byCat[e.cat]) byCat[e.cat]={total:0,me:0,spouse:0}; byCat[e.cat].total+=e.amount; byCat[e.cat][e.person]+=e.amount; });
+  const catRows = Object.entries(byCat).sort((a,b)=>b[1].total-a[1].total).map(([catId,data]) => {
+    const cat = cats.find(c=>c.id===catId)||{label:catId,icon:'📦'};
+    const sub = [data.me?`Εγώ ${data.me.toFixed(0)}€`:'', data.spouse?`Σωτήρης ${data.spouse.toFixed(0)}€`:''].filter(Boolean).join(' · ');
+    return `<div class="cat-summary-row"><div class="cat-summary-left"><div class="cat-icon">${cat.icon}</div><div><div class="cat-summary-label">${cat.label}</div><div class="cat-summary-sub">${sub}</div></div></div><div class="cat-summary-amount">${data.total.toFixed(2)}€</div></div>`;
+  }).join('');
+  const bySrc = {};
+  expenses.forEach(e => { if(e.source){ if(!bySrc[e.source]) bySrc[e.source]=0; bySrc[e.source]+=e.amount; } });
+  const srcRows = Object.entries(bySrc).sort((a,b)=>b[1]-a[1]).map(([srcId,total]) => {
+    const src = SOURCES.find(s=>s.id===srcId)||{label:srcId,icon:'💳'};
+    return `<div class="cat-summary-row"><div class="cat-summary-left"><div class="cat-icon" style="font-size:16px;">${src.icon}</div><div class="cat-summary-label">${src.label}</div></div><div class="cat-summary-amount">${total.toFixed(2)}€</div></div>`;
+  }).join('');
+  content.innerHTML = `
+    <div class="summary-card">
+      <h3>Σύνολο μήνα</h3>
+      <div class="total-big">${total.toFixed(2)}€</div>
+      <div class="split-row">
+        <div class="split-card me"><div class="name">Εγώ</div><div class="amount">${meTotal.toFixed(2)}€</div></div>
+        <div class="split-card spouse"><div class="name">Σωτήρης</div><div class="amount">${spouseTotal.toFixed(2)}€</div></div>
+      </div>
+    </div>
+    <div class="summary-card"><h3>Ανά κατηγορία</h3>${catRows}</div>
+    ${srcRows ? `<div class="summary-card"><h3>Ανά πηγή πληρωμής</h3>${srcRows}</div>` : ''}`;
+}
+
+// WISE INTEREST AUTO-CREDIT (0.8% on day 5 of each month)
+function checkWiseInterest() {
+  const today = new Date();
+  const day = today.getDate();
+  if (day !== 5) return;
+  const monthKey = today.toISOString().slice(0,7);
+  const lastApplied = localStorage.getItem('wise_interest_applied');
+  if (lastApplied === monthKey) return; // already applied this month
+
+  const bal = getBalances();
+  if (bal['wise'] && bal['wise'] > 0) {
+    const interest = parseFloat((bal['wise'] * 0.008).toFixed(2));
+    bal['wise'] = parseFloat((bal['wise'] + interest).toFixed(2));
+    saveBalancesData(bal);
+
+    // Log it as a special entry in expenses
+    const expenses = getExpenses();
+    expenses.push({
+      id: Date.now(),
+      person: 'me',
+      cat: 'other',
+      source: 'wise',
+      amount: -interest, // negative = income
+      note: '🟢 Τόκος Wise +' + interest.toFixed(2) + '€ (0.8%)',
+      date: today.toISOString(),
+      isInterest: true
+    });
+    saveExpenses(expenses);
+    localStorage.setItem('wise_interest_applied', monthKey);
+    showToast('🟢 Τόκος Wise +' + interest.toFixed(2) + '€ πιστώθηκε!');
+  }
+}
+checkWiseInterest();
+
+// MODALS
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-overlay').forEach(m => m.addEventListener('click', e => { if(e.target===m) m.classList.remove('open'); }));
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2200);
+}
+</script>
+</body>
+</html>
