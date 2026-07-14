@@ -339,6 +339,29 @@ let listening = false;
 
 const SHEET_URL = 'https://script.google.com/macros/s/AKfycbwB939j8KtLpN8ZMgfmoMQ6RDAF8t7WL95UKFctbK9L7trYWZ5SwCzvIjkAVpOx1nV0/exec';
 
+async function syncBalancesToSheet(bal) {
+  try {
+    await fetch(SHEET_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'balances', balances: bal })
+    });
+  } catch(e) { console.log('Balance sync error:', e); }
+}
+
+async function loadBalancesFromSheet() {
+  try {
+    const res = await fetch(SHEET_URL + '?type=balances&t=' + Date.now());
+    const data = await res.json();
+    if (data.balances) {
+      saveBalancesData(data.balances);
+      return data.balances;
+    }
+  } catch(e) { console.log('Balance load error:', e); }
+  return null;
+}
+
 async function syncToSheet(action, data) {
   try {
     await fetch(SHEET_URL, {
@@ -503,11 +526,14 @@ function saveExpense() {
   saveExpenses(expenses);
   syncToSheet('add', newExpense);
 
-  // Deduct from balance
-  const bal = getBalances();
-  if (bal[selectedSource] !== undefined) {
-    bal[selectedSource] = Math.max(0, (bal[selectedSource] || 0) - amt);
-    saveBalancesData(bal);
+  // Deduct from balance ONLY if Νατάσα is paying
+  if (selectedPerson === 'me') {
+    const bal = getBalances();
+    if (bal[selectedSource] !== undefined) {
+      bal[selectedSource] = Math.max(0, (bal[selectedSource] || 0) - amt);
+      saveBalancesData(bal);
+      syncBalancesToSheet(bal);
+    }
   }
 
   showToast('Αποθηκεύτηκε ✓');
@@ -588,6 +614,7 @@ function saveBalances() {
     if (!isNaN(v)) bal[s.id] = v;
   });
   saveBalancesData(bal);
+  syncBalancesToSheet(bal);
   closeModal('modal-balances');
   renderWallet();
   showToast('Υπόλοιπα αποθηκεύτηκαν ✓');
@@ -863,9 +890,18 @@ function saveCashMovement() {
   const movements = getCashMovements();
   movements.push({ id: Date.now(), type, amount: amt, note, date: new Date().toISOString() });
   saveCashMovements(movements);
+
+  // Update cash balance in wallet sources
+  const bal = getBalances();
+  const currentCash = bal['cash'] || 0;
+  bal['cash'] = type === 'add' ? currentCash + amt : Math.max(0, currentCash - amt);
+  saveBalancesData(bal);
+  syncBalancesToSheet(bal);
+
   document.getElementById('cash-amount').value = '';
   document.getElementById('cash-note').value = '';
   renderCashTab();
+  renderWallet();
   showToast(type === 'add' ? '➕ Προστέθηκαν '+amt.toFixed(2)+'€' : '➖ Αφαιρέθηκαν '+amt.toFixed(2)+'€');
 }
 
